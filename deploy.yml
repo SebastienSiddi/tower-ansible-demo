@@ -5,20 +5,41 @@
   vars_files:
     - files/secrets/credentials.yml
   pre_tasks:
-    - name: Install EPEL repo
-      package: name=epel-release state=present
-      when: ansible_distribution == "CentOS"
-    - name: Download pip script
-      get_url:
-        url: https://bootstrap.pypa.io/pip/2.7/get-pip.py
-        dest: /tmp/get-pip.py
-    - name: Install python-pip
-      command: python2.7 /tmp/get-pip.py
-    - name: Install docker python
-      pip: name=docker-py
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_distribution == "Ubuntu"
+    - name: Install required system packages
+      ansible.builtin.apt:
+        name: 
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+        state: present
+      when: ansible_distribution == "Ubuntu"
+    - name: Install Docker Engine
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        state: present
+      when: ansible_distribution == "Ubuntu"
+    - name: Update apt cache after adding Docker repo
+      ansible.builtin.apt:
+        update_cache: true
+      when: ansible_distribution == "Ubuntu"
+    - name: Install docker-ce (Docker Community Edition)
+      ansible.builtin.apt:
+        name: docker-ce
+        state: present
+      when: ansible_distribution == "Ubuntu"
+    - name: Install Docker SDK for Python
+      ansible.builtin.pip:
+        name: docker
+        state: present
   tasks:
     - name: Create Apache container
-      docker_container:
+      community.docker.docker_container:
         name: webapp
         image: httpd
         ports:
